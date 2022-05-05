@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 require_relative '../constants'
+require_relative '../utils'
 
 module OpenTelemetry
   module Instrumentation
@@ -42,8 +43,8 @@ module OpenTelemetry
             opts = Utils.parse_opts(sql, options, db.opts, self)
             response = nil
 
-            span_name, attrs = span_attrs(:execute, *args)
-            tracer.in_span(span_name, attributes: attrs, kind: :client) do
+            # span_name, attrs = span_attrs(:execute, *args)
+            tracer.in_span("span_name", attributes: {}, kind: :client) do
               response = super_method.call(sql, options, &block)
             end
             response
