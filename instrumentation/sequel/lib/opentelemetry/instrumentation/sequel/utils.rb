@@ -9,7 +9,7 @@ module OpenTelemetry
     module Sequel
       module Utils
         class << self
-          def parse_opts(sql, opts, dataset = nil)
+          def parse_opts(sql, opts, db_opts, dataset = nil)
             # Prepared statements don't provide their sql query in the +sql+ parameter.
             if !sql.is_a?(String) && (dataset && dataset.respond_to?(:prepared_sql) &&
               (resolved_sql = dataset.prepared_sql))
