@@ -15,9 +15,7 @@ module OpenTelemetry
 
           def run(sql, options = ::Sequel::OPTS)
             opts = parse_opts(sql, options)
-
             response = nil
-
             span_name, attrs = span_attrs(:execute, *args)
             tracer.in_span(span_name, attributes: attrs, kind: :client) do
               response = super(sql, options)
@@ -46,6 +44,10 @@ module OpenTelemetry
             Utils.parse_opts(sql, opts, db_opts)
           end
 
+          def adapter_name
+            Utils.adapter_name(db)
+          end
+
           # Rubocop is complaining about 19.31/18 for Metrics/AbcSize.
           # But, getting that metric in line would force us over the
           # module size limit! We can't win here unless we want to start
@@ -54,7 +56,10 @@ module OpenTelemetry
             operation = extract_operation(args[0])
             sql = obfuscate_sql(args[0]).to_s
 
-            attrs = { 'db.operation' => validated_operation(operation), 'db.postgresql.prepared_statement_name' => statement_name }
+            attrs = { 
+              'db.operation' => validated_operation(operation), 
+              'db.prepared_statement_name' => statement_name 
+            }
             attrs['db.statement'] = sql unless config[:db_statement] == :omit
             attrs.reject! { |_, v| v.nil? }
 
@@ -67,7 +72,7 @@ module OpenTelemetry
           end
 
           def span_name(operation)
-            [validated_operation(operation), database_name].compact.join(' ')
+            validated_operation(operation)
           end
 
           def validated_operation(operation)
@@ -75,18 +80,9 @@ module OpenTelemetry
           end
 
           def obfuscate_sql(sql)
-            return sql unless config[:db_statement] == :obfuscate
-
-            # Borrowed from opentelemetry-instrumentation-mysql2
-            return 'SQL query too large to remove sensitive data ...' if sql.size > 2000
-
-            # From:
-            # https://github.com/newrelic/newrelic-ruby-agent/blob/9787095d4b5b2d8fcaf2fdbd964ed07c731a8b6b/lib/new_relic/agent/database/obfuscator.rb
-            # https://github.com/newrelic/newrelic-ruby-agent/blob/9787095d4b5b2d8fcaf2fdbd964ed07c731a8b6b/lib/new_relic/agent/database/obfuscation_helpers.rb
-            obfuscated = sql.gsub(generated_postgres_regex, '?')
-            obfuscated = 'Failed to obfuscate SQL query - quote characters remained after obfuscation' if Sequel::Constants::UNMATCHED_PAIRS_REGEX.match(obfuscated)
-
-            obfuscated
+            # todo obfuscate
+            # return sql unless config[:db_statement] == :obfuscate
+            return sql
           end
 
           def generated_postgres_regex
@@ -99,26 +95,11 @@ module OpenTelemetry
 
           def client_attributes
             attributes = {
-              'db.system' => 'postgresql',
-              'db.user' => conninfo_hash[:user]&.to_s,
-              'db.name' => database_name,
-              'net.peer.name' => conninfo_hash[:host]&.to_s
+
             }
             attributes['peer.service'] = config[:peer_service] if config[:peer_service]
 
-            attributes.merge(transport_attrs).reject { |_, v| v.nil? }
-          end
-
-          def transport_attrs
-            if conninfo_hash[:host]&.start_with?('/')
-              { 'net.transport' => 'Unix' }
-            else
-              {
-                'net.transport' => 'IP.TCP',
-                'net.peer.ip' => conninfo_hash[:hostaddr]&.to_s,
-                'net.peer.port' => conninfo_hash[:port]&.to_s
-              }
-            end
+            attributes.reject { |_, v| v.nil? }
           end
         end
       end
