@@ -1,0 +1,5 @@
+# frozen_string_literal: true
+
+appraise 'sequel-1.2.3' do
+  gem 'sequel'
+end
