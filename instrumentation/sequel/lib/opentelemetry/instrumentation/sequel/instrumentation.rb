@@ -34,10 +34,12 @@ module OpenTelemetry
 
         def require_dependencies
           require_relative 'patches/database'
+          require_relative 'patches/dataset'
         end
 
         def patch_client
           ::Sequel::Database.prepend(Patches::Database)
+          ::Sequel::Dataset.prepend(Patches::Dataset)
         end
       end
     end
