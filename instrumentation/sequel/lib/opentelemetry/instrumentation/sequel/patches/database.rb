@@ -23,23 +23,6 @@ module OpenTelemetry
               response = super(sql, options)
             end
             response
-
-            # Tracing.trace(Ext::SPAN_QUERY) do |span|
-            #   span.resource = opts[:query]
-            #   span.span_type = Tracing::Metadata::Ext::SQL::TYPE
-            #   Utils.set_common_tags(span, self)
-            #   span.set_tag(Ext::TAG_DB_VENDOR, adapter_name)
-            #   response = super(sql, options)
-            # end
-          end
-
-          Sequel::Constants::EXEC_ISH_METHODS.each do |method|
-            define_method method do |*args|
-              span_name, attrs = span_attrs(:query, *args)
-              tracer.in_span(span_name, attributes: attrs, kind: :client) do
-                super(*args)
-              end
-            end
           end
 
           private
